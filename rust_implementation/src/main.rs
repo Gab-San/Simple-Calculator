@@ -1,8 +1,11 @@
-use std::io;
-use calculator::OpExpression;
+use std::process;
 
 fn main() {
     loop {
-        calculator::run().unwrap()
+        // Interested only in the error
+        if let Err(e) = calculator::run() {
+            eprintln!("Application error: {}", e);
+            process::exit(1);
+        }
     }
 }
