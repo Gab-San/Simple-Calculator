@@ -2,6 +2,9 @@ use std::error::Error;
 use std::io::{self, Write};
 use std::str::FromStr;
 
+pub mod tokenizer;
+pub mod stack;
+
 enum Operator {
     SUM,
     SUBTRACTION,
@@ -11,7 +14,6 @@ enum Operator {
 
 impl Operator {
     fn build(arg : &str) -> Result<Self, &'static str> {
-        
         let op = match arg {
             "+" => Operator::SUM,
             "-" => Operator::SUBTRACTION,
