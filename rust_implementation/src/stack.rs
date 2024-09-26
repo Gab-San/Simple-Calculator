@@ -47,7 +47,7 @@ impl<T> Stack<T> {
     /// use calculator::stack::Stack;
     /// 
     /// // This stack will contain at least 4 string before reallocation
-    /// let stack : Stack<i32> = Stack::with_capacity(4);
+    /// let mut stack : Stack<i32> = Stack::with_capacity(4);
     /// 
     /// // This are all done without reallocation
     /// for i in 0..4 {
@@ -92,7 +92,7 @@ impl<T> Stack<T> {
     /// ```
     /// use calculator::stack::Stack;
     /// 
-    /// let mut stack = Stack::new()
+    /// let mut stack = Stack::new();
     /// stack.push(3);
     /// assert_eq!(stack.pop(), Some(3));
     /// assert_eq!(stack.pop(), None);
