@@ -6,9 +6,9 @@ use regex::Regex;
 use stack::Stack;
 use tokenizer::StringTokenizer;
 
-pub mod tokenizer;
+mod tokenizer;
 pub mod stack;
-
+mod unsafe_stack;
 
 const REGEX_STRING : &str = r"\b[0-9]+(?:\.[0-9]){0,1}|\w+\b|(?:\b|\B)[()*/+-](?:\b|\B)";
 
