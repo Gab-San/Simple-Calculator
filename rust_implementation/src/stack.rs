@@ -1,3 +1,8 @@
+//! SHOULD BE IMPLEMENTED WITH UNSAFE RUST AND NOT 
+//! USING AN UNDERLING VECTOR!!! 
+//! 
+
+
 /// Data structure of type LIFO (_Last In First Out_) growable in size.
 /// 
 /// # Examples

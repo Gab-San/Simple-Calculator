@@ -1,9 +1,13 @@
 use std::error::Error;
 use std::io::{self, Write};
-use std::str::FromStr;
+
+use regex::Regex;
+use tokenizer::StringTokenizer;
 
 pub mod tokenizer;
 pub mod stack;
+
+const REGEX_STRING : &str = r"\b[0-9]+(?:\.[0-9]){0,1}|ans|ANS\b|(?:\b|\B)[()*/+-](?:\b|\B)";
 
 enum Operator {
     SUM,
@@ -25,16 +29,20 @@ impl Operator {
         Ok(op)
     }
 }
+enum Factor {
+    VALUE(f64),
+    EXPRESSION(Box<OpExpression>),
+}
 
 struct OpExpression {
-    fact1 : f64,
-    fact2 : f64,
+    fact1 : Factor,
+    fact2 : Factor,
     operator : Operator,
 }
 
 impl OpExpression {
-    fn build(mut args: impl Iterator<Item = String>, res : Option<f64>) -> Result<Self, &'static str> {
-        let fact1: f64 = OpExpression::parse_factor(args.next(), res)?;
+    fn build<'a>(mut args: impl Iterator<Item = &'a String>, res : Option<f64>) -> Result<Self, &'static str> {
+        let fact1  = OpExpression::parse_factor(args.next(), res)?;
 
         let operator = match args.next() {
             // Returned error is of the same type of this function error
@@ -43,7 +51,7 @@ impl OpExpression {
             None => return Err("Missing operator!"),
         };
 
-        let fact2: f64 = OpExpression::parse_factor(args.next(), res)?;
+        let fact2  = OpExpression::parse_factor(args.next(), res)?;
 
         Ok(OpExpression {
             fact1,
@@ -53,19 +61,28 @@ impl OpExpression {
     }
 
     fn execute(&self) -> f64 {
+        let fact1 = match self.fact1 {
+            Factor::VALUE(val) => val,
+            Factor::EXPRESSION(_) => 0.0,
+        };
+
+        let fact2 = match self.fact2 {
+            Factor::VALUE(val) => val,
+            Factor::EXPRESSION(_) => 0.0,
+        };
+
         match self.operator {
-            Operator::SUM => sum (self.fact1, self.fact2),
-            Operator::SUBTRACTION => subtraction(self.fact1, self.fact2),
-            Operator::MULTIPLICATION => multiplication(self.fact1, self.fact2),
-            Operator::DIVISION => division(self.fact1, self.fact2),
+            Operator::SUM => sum(fact1, fact2),
+            Operator::SUBTRACTION => subtraction(fact1, fact2),
+            Operator::MULTIPLICATION => multiplication(fact1, fact2),
+            Operator::DIVISION => division(fact1, fact2),
         }
     }
 
     // This way the result type is tied to current calculation
     // Could introduce errors if to choose to implement
     // Dynamic types for the calculations
-    fn parse_factor<T> (factor : Option<String>, res : Option<T>) -> Result<T, &'static str>
-    where T : FromStr // or parse_factor<T: FromStr>
+    fn parse_factor<'a>(factor : Option<&'a String>, res : Option<f64>) -> Result<Factor, &'static str>
     {
         
         let fact = match factor {
@@ -75,18 +92,18 @@ impl OpExpression {
 
         if fact.eq_ignore_ascii_case("ans") {
             return match res {
-                Some(val) => Ok(val),
+                Some(val) => Ok(Factor::VALUE(val)),
                 // THIS IS NOT THE INTENDED WAY TO MAKE IT WORK
                 None => return Err("No calculation was made previously"),
             }
         }
 
-        let fact : T = match fact.parse(){
+        let fact : f64 = match fact.parse(){
             Ok(val) => val,
             Err(_) => return Err("Cannot parse factor!"),
         };
 
-        Ok(fact)
+        Ok(Factor::VALUE(fact))
     }
 }
 
@@ -106,6 +123,15 @@ fn subtraction(fact1 : f64, fact2: f64) -> f64 {
     fact1 - fact2
 }
 
+fn contains_exit(args: &String) -> bool{
+    let mut args_iterator = args.split_whitespace().into_iter();
+    let val = args_iterator.next().unwrap();
+    if val.eq_ignore_ascii_case("quit") || val.eq_ignore_ascii_case("exit"){
+        return true;
+    }
+
+    false
+}
 
 pub fn run() -> Result< (), Box<dyn Error> > {
     let mut result : Option<f64> = None;
@@ -115,19 +141,18 @@ pub fn run() -> Result< (), Box<dyn Error> > {
         print!("> ");
         io::stdout().flush()?;
         io::stdin().read_line(&mut args)?;
-        
-        let args = args.trim();
 
-        if args.eq_ignore_ascii_case("quit") || args.eq_ignore_ascii_case("exit") {
+        if contains_exit(&args) {
             break;
         }
 
-        let expression: OpExpression = OpExpression::build(
-                                                            args
-                                                                .split_whitespace()
-                                                                .map(|x| String::from(x)),
-                                                                result
-                                                            )?;
+        // FIND REGEX TO PARSE FLOATS
+        let rgx = Regex::new(REGEX_STRING)?;
+        let tokenised_string = StringTokenizer::new(rgx, &args[..]);
+        println!("{:#?}", tokenised_string);
+
+        let expression: OpExpression = OpExpression::build( tokenised_string.iter(),
+                                                            result )?;
         result = Some(expression.execute());
 
         println!("Result of your operation: {}", result.unwrap());
@@ -143,17 +168,26 @@ mod tests {
 
     #[test]
     fn parse_result_factor() {
-        let res = Some(5);
+        let res = Some(5.0);
 
-        let fact: Result<i32, &str> = OpExpression::parse_factor(Some(String::from("ANS")), res);
+        let fact: Result<Factor, &str> = OpExpression::parse_factor(Some(String::from("ANS")), res);
+        let fact = match fact.unwrap() {
+            Factor::VALUE(val) => val,
+            Factor::EXPRESSION(_) => 0.0,
+        };
 
-        assert_eq!(fact.unwrap(), res.unwrap());
+        assert_eq!(fact, res.unwrap());
     }
 
     #[test]
     fn parse_any_factor() {
-        let fact: Result<f64, &str> = OpExpression::parse_factor(Some(String::from("10")), None);
-        assert_eq!(fact.unwrap(), 10.0);
+        let fact: Result<Factor, &str> = OpExpression::parse_factor(Some(String::from("10")), None);
+        let fact = match fact.unwrap() {
+            Factor::VALUE(val) => val,
+            Factor::EXPRESSION(_) => 0.0,
+        };
+
+        assert_eq!(fact, 10.0);
     }
 
     #[test]
@@ -164,7 +198,8 @@ mod tests {
         let res: Option<f64> = None;
         // Unused value, expecting to panic
         let _: f64 = match OpExpression::parse_factor(Some(String::from("ans")), res){
-            Ok(val) => val,
+            Ok(Factor::VALUE(val)) => val,
+            Ok(Factor::EXPRESSION(_)) => 0.0,
             Err(err) => panic!("{}", err),
         };
     }

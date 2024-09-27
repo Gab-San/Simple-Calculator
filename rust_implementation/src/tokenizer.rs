@@ -1,6 +1,6 @@
 use std::slice::Iter;
 use regex::Regex;
-
+#[derive(Debug)]
 pub struct StringTokenizer {
     tokenised_string : Vec<String>,
 }
