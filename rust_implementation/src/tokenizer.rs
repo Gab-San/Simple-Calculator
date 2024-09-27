@@ -16,6 +16,15 @@ impl StringTokenizer {
     pub fn iter(&self) -> Iter<'_, String>   {
         self.tokenised_string.iter()
     }
+
+    pub fn contains(&self, exit_string : &str) -> bool {
+        for val in &self.tokenised_string {
+            if val.eq_ignore_ascii_case(exit_string) {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 #[cfg(test)]

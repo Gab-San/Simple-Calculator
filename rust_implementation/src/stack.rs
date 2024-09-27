@@ -131,12 +131,41 @@ impl<T> Stack<T> {
     pub fn peek(&self) -> Option<&T> {
         self.vector.last()
     }
+
+    /// Returns `true` if the stack contains no elements
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut stack = Stack::new();
+    /// assert!(stack.is_empty());
+    /// stack.push(2);
+    /// assert!(!stack.is_empty());
+    /// stack.pop();
+    /// assert!(stack.is_empty());
+    /// ```
+    /// 
+    /// # Time complexity
+    /// Takes O(1) time.
+    pub fn is_empty(&self) -> bool {
+        self.vector.is_empty()
+    }
 }
 
 
 // TODO: implement tests when able to allocate memory and define a proper stack
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_emptyness() {
+        let mut stack = Stack::new();
+        assert!(stack.is_empty());
+        stack.push(2);
+        assert!(!stack.is_empty());
+        stack.pop();
+        assert!(stack.is_empty());
+    }
+}
