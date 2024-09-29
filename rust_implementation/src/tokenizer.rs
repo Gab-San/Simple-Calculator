@@ -1,5 +1,7 @@
 use std::slice::Iter;
 use regex::Regex;
+
+
 #[derive(Debug)]
 pub struct StringTokenizer {
     tokenised_string : Vec<String>,
@@ -39,29 +41,8 @@ mod tests {
         let rgx  = Regex::new(r"\b[0-9]+\b|(?:\b|\B)[()*/+-](?:\b|\B)").unwrap();
         let exp = "3+4*(2-5)/77-(82*(55-2))";
         let tokenizer = StringTokenizer::new(rgx, exp);
-        assert_eq!(tokenizer.tokenised_string, vec![
-            "3",
-            "+",
-            "4",
-            "*",
-            "(",
-            "2",
-            "-",
-            "5",
-            ")",
-            "/",
-            "77",
-            "-",
-            "(",
-            "82",
-            "*",
-            "(",
-            "55",
-            "-",
-            "2",
-            ")",
-            ")",
-        ])
+        assert_eq!( tokenizer.tokenised_string, vec!["3", "+", "4", "*", "(", "2", "-", "5", ")", "/", "77",
+            "-", "(", "82", "*", "(", "55", "-", "2", ")", ")",] );
     }
 }
 
