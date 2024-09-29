@@ -3,13 +3,12 @@ use std::io::{self, Write};
 
 
 use regex::Regex;
-use stack::Stack;
+pub use stack::Stack;
 use tokenizer::StringTokenizer;
 
 
 mod tokenizer;
-pub mod stack;
-mod unsafe_stack;
+mod stack;
 
 const REGEX_STRING : &str = r"\b[0-9]+(?:\.[0-9]){0,1}|\w+\b|(?:\b|\B)[()*/+-](?:\b|\B)";
 
