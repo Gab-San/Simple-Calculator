@@ -18,12 +18,7 @@ impl StringTokenizer {
     }
 
     pub fn contains(&self, exit_string : &str) -> bool {
-        for val in &self.tokenised_string {
-            if val.eq_ignore_ascii_case(exit_string) {
-                return true;
-            }
-        }
-        false
+        self.tokenised_string.contains(&String::from(exit_string))
     }
 }
 

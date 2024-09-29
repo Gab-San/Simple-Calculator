@@ -8,7 +8,3 @@ fn main() {
         process::exit(1);
     }
 }
-
-
-
-// REGEX \b[0-9]+\b|(?:\b|\B)[()*/+-](?:\b|\B)
