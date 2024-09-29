@@ -14,46 +14,6 @@ impl Factor {
             Factor::Expression(_) => panic!("Trying to extract an expression not a value"),
         }
     }
-}
-
-pub struct Expression {
-    fact1 : Factor,
-    fact2 : Factor,
-    operator : Operator,
-}
-
-impl Expression {
-    pub fn new((fact1, fact2) : (Factor, Factor), operator : Operator) -> Self {
-        Self {
-            fact1,
-            fact2,
-            operator,
-        }
-    }
-
-    pub fn evaluate(&self) -> f64 {
-        let f = match self.operator {
-            Operator::Sum => sum,
-            Operator::Subtraction => subtraction,
-            Operator::Multiplication => multiplication,
-            Operator::Division => division,
-            _ => panic!("Trying to evaluate a not a valid operation!"),
-        };
-
-        let fact1 = if let Factor::Expression(exp) = &self.fact1 {
-            exp.evaluate()
-        } else {
-            self.fact1.extract()
-        };
-
-        let fact2 = if let Factor::Expression(exp) = &self.fact2 {
-            exp.evaluate()
-        } else {
-            self.fact2.extract()
-        };
-
-        f(fact1, fact2)
-    }
 
     // This way the result type is tied to current calculation
     // Could introduce errors if to choose to implement
@@ -83,21 +43,38 @@ impl Expression {
     }
 }
 
+pub struct Expression {
+    fact1 : Factor,
+    fact2 : Factor,
+    operator : Operator,
+}
 
+impl Expression {
+    pub fn new((fact1, fact2) : (Factor, Factor), operator : Operator) -> Self {
+        Self {
+            fact1,
+            fact2,
+            operator,
+        }
+    }
 
-// These functions should be implemented manually to be as
-// close as possible to low level implementation (TO DECIDE. Could be done in C)
-fn sum(fact1 : f64, fact2: f64) -> f64 {
-    fact1 + fact2
+    pub fn evaluate(&self) -> f64 {
+        let f = self.operator.extract();
+
+        let fact1 = extract_factor(&self.fact1);
+
+        let fact2 = extract_factor(&self.fact2);
+
+        f(fact1, fact2)
+    }
 }
-fn division(fact1 : f64, fact2: f64) -> f64 {
-    fact1 / fact2
-}
-fn multiplication(fact1 : f64, fact2: f64) -> f64 {
-    fact1 * fact2
-}
-fn subtraction(fact1 : f64, fact2: f64) -> f64 {
-    fact1 - fact2
+
+fn extract_factor(fact: &Factor) -> f64 {
+    if let Factor::Expression(exp) = fact {
+        exp.evaluate()
+    } else {
+        fact.extract()
+    }
 }
 
 
@@ -109,7 +86,7 @@ mod tests {
     fn parse_result_factor() {
         let res = Some(5.0);
 
-        let fact: Result<Factor, &str> = Expression::parse_factor(Some(String::from("ANS")).as_ref(), res);
+        let fact: Result<Factor, &str> = Factor::parse_factor(Some(String::from("ANS")).as_ref(), res);
         let fact = match fact.unwrap() {
             Factor::Value(val) => val,
             Factor::Expression(_) => 0.0,
@@ -120,7 +97,7 @@ mod tests {
 
     #[test]
     fn parse_any_factor() {
-        let fact: Result<Factor, &str> = Expression::parse_factor(Some(String::from("10")).as_ref(), None);
+        let fact: Result<Factor, &str> = Factor::parse_factor(Some(String::from("10")).as_ref(), None);
         let fact = match fact.unwrap() {
             Factor::Value(val) => val,
             Factor::Expression(_) => 0.0,
@@ -136,7 +113,7 @@ mod tests {
     fn parse_empty_result() {
         let res: Option<f64> = None;
         // Unused value, expecting to panic
-        let _: f64 = match Expression::parse_factor(Some(String::from("ans")).as_ref(), res){
+        let _: f64 = match Factor::parse_factor(Some(String::from("ans")).as_ref(), res){
             Ok(Factor::Value(val)) => val,
             Ok(Factor::Expression(_)) => 0.0,
             Err(err) => panic!("{}", err),

@@ -67,7 +67,7 @@ fn shunting_yard_algorithm(str_tok : &StringTokenizer, res : Option<f64>) -> Res
 
     for val in str_tok.iter() {
         if num_rgx.is_match(&val[..]) { // It's exclusive, it's either a number or an operator (or a function)
-            let factor = Expression::parse_factor(Some(val), res)?;
+            let factor = Factor::parse_factor(Some(val), res)?;
             number_stack.push(factor);
             continue;
         }         
@@ -80,7 +80,7 @@ fn shunting_yard_algorithm(str_tok : &StringTokenizer, res : Option<f64>) -> Res
                     if op == Operator::OpenBracket {
                         break;
                     }
-                    
+
                     assert!(!op_stack.is_empty(), "Expression not correctly parenthesised");
                     let expression = build_exp(&mut number_stack, op);
                     number_stack.push(expression);
