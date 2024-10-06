@@ -1,10 +1,10 @@
 use core::slice;
-use std::{alloc::{self, Layout}, mem, ptr::{self, NonNull}};
+use std::{alloc::{self, Layout}, fmt::Debug, mem, ptr::{self, NonNull}};
 
 
 const REALLOC_AMOUNT : usize = 32;
 
-#[derive (Debug)]
+#[derive(Debug)]
 struct RawVec<T> {
     ptr: NonNull<T>,
     capacity : usize,
@@ -12,7 +12,7 @@ struct RawVec<T> {
 
 impl<T> RawVec<T> {
     fn new() -> Self {
-        let capacity = if mem::size_of::<T>() == 0 {isize::MAX as usize} else {0};
+        let capacity = if mem::size_of::<T>() == 0 {usize::MAX} else {0};
 
         RawVec {
             ptr : NonNull::dangling(),
@@ -20,24 +20,34 @@ impl<T> RawVec<T> {
         }
     }
 
-    fn with_capacity(init_cap : usize) -> Self {
+    pub fn with_capacity(init_cap : usize) -> Self {
 
-        assert!(init_cap < isize::MAX as usize, "Allocation too large");
-        let capacity = if mem::size_of::<T>() == 0 {isize::MAX as usize} else {init_cap};
-
-        // Sure to be able to allocate (introducing a bit of redundancy)
-        let layout = Layout::array::<T>(init_cap).unwrap();
-        
-        unsafe{
-            let layout_ptr = alloc::alloc(layout);
-            if layout_ptr.is_null() {
-                alloc::handle_alloc_error(layout);
-            }
+        if mem::size_of::<T>() == 0 {
+            return Self {
+                ptr : NonNull::dangling(),
+                capacity : usize::MAX,
+            };
         }
 
+        let capacity = init_cap;
+
+         // Ensuring allocation validity
+         assert!(init_cap <= isize::MAX as usize, "Initial allocation too large!");
+        
+        let layout = Layout::array::<T>(init_cap).unwrap();
+        
+       
+
+        let layout_ptr = unsafe{alloc::alloc(layout)};
+
+        let ptr = match NonNull::new(layout_ptr as *mut T) {
+            Some(p) => p,
+            None => alloc::handle_alloc_error(layout),
+        };
+
         Self {
-            ptr : NonNull::dangling(),
-            capacity : capacity,
+            ptr,
+            capacity,
         }
     }
 
@@ -48,11 +58,13 @@ impl<T> RawVec<T> {
 
         let (new_cap, new_layout) = {
             let new_cap = self.capacity + REALLOC_AMOUNT;
-            // Check for valid capacity
-            assert!(new_cap <= isize::MAX as usize, "Allocation too large");
+
             let new_layout = Layout::array::<T>(new_cap).unwrap();
             (new_cap, new_layout)
         };
+
+        // Check for valid capacity
+        assert!(new_layout.size() <= isize::MAX as usize, "Allocation too large");
 
         let new_ptr = if self.capacity == 0 {
             // Never allocated anything before
@@ -82,7 +94,6 @@ impl<T> Drop for RawVec<T> {
     }
 }
 
-
 /// Data structure of type LIFO (_Last In First Out_) growable in size.
 /// 
 /// # Examples
@@ -100,7 +111,6 @@ impl<T> Drop for RawVec<T> {
 /// assert_eq!(stack.pop(), Some(5));
 /// assert_eq!(stack.pop(), Some(3));
 /// ```
-#[derive(Debug)]
 pub struct Stack<T> {
     // Cannot ref and deref directly into memory due to it possibly not being initialized,
     // be evaluated as valid instance of T and would call drop on the overwritten value.
@@ -153,7 +163,7 @@ impl<T> Stack<T> {
     // /// // This may require reallocation
     // /// stack.push(5);
     // /// ```
-    fn with_capacity(init_cap : usize) -> Self {
+    pub fn with_capacity(init_cap : usize) -> Self {
         Stack {
             buf : RawVec::with_capacity(init_cap),
             length : 0,
@@ -208,6 +218,7 @@ impl<T> Stack<T> {
         if self.length == 0 {
             return None;
         }
+
         self.length -= 1;
         unsafe {
             Some(ptr::read(self.as_ptr().add(self.length)))
@@ -268,6 +279,17 @@ impl<T> Drop for Stack<T> {
     }
 }
 
+impl<T : Debug> Debug for Stack<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let slice : &[T] = unsafe{std::slice::from_raw_parts(self.as_ptr(), self.length)};
+        f.debug_struct("RawVec")
+        .field("vals", &slice.iter())
+        .field("cap", &self.cap())
+        .field("len", &self.length)
+        .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -279,13 +301,32 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "with_capacity doesn't work"]
+    fn create_empty_stack_with_capacity() {
+        let stack: Stack<u32> = Stack::with_capacity(5);
+        println!("{:#?}", stack);
+    }
+
+    #[test]
     fn create_stack_with_capacity() {
         let mut stack : Stack<u8> = Stack::with_capacity(5);
         for i in 0..5 {
             stack.push(i);
         }
         assert_eq!(*stack.peek().unwrap(), 4);
+        println!("{:#?}", stack);
+    }
+
+    #[test]
+    fn push_values_past_capacity() {
+        let st_cap = 5;
+        let mut stack : Stack<u8> = Stack::with_capacity(st_cap);
+        println!("Starting cap: {}", st_cap);
+        for i in 0..5 {
+            stack.push(i);
+        }
+        assert_eq!(*stack.peek().unwrap(), 4);
+        stack.push(5);
+        assert_eq!(*stack.peek().unwrap(), 5);
         println!("{:#?}", stack);
     }
 

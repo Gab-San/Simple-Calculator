@@ -57,8 +57,8 @@ fn build_exp(num_stack : &mut Stack<Factor>, operator : Operator) -> Factor {
 }
 
 fn shunting_yard_algorithm(str_tok : &StringTokenizer, res : Option<f64>) -> Result<Factor, Box<dyn Error>> {
-    let mut op_stack : Stack<Operator> = Stack::new();
-    let mut number_stack : Stack<Factor> = Stack::new();
+    let mut op_stack : Stack<Operator> = Stack::with_capacity(10);
+    let mut number_stack : Stack<Factor> = Stack::with_capacity(10);
 
     const NUMBER_REGEX : &str = r"\d+(?:\.\d+){0,1}|ans|ANS"; 
     // const OPERATOR_REGEX : &str = r"[()*/+-]"; 
@@ -102,9 +102,8 @@ fn shunting_yard_algorithm(str_tok : &StringTokenizer, res : Option<f64>) -> Res
         op_stack.push(operator);
     }
 
-    
+    eprintln!("{:#?}", op_stack);
     while let Some(operator) = op_stack.pop() {
-        println!("[Popping Out] {:#?}", operator);
         assert!(operator != Operator::OpenBracket || operator != Operator::ClosedBracket, "There are mismatched parentheses");
         let exp = build_exp(&mut number_stack, operator);
         number_stack.push(exp);

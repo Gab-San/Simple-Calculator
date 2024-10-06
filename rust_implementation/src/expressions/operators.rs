@@ -29,7 +29,6 @@ impl Operator {
         match self {
             Operator::Sum | Operator::Subtraction => {
                 match other {
-                    Operator::Sum | Operator::Subtraction => true,
                     _ => false,     
                 }
             },
