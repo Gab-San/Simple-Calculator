@@ -8,12 +8,6 @@ pub enum Factor {
 }
 
 impl Factor {
-    pub fn extract(&self) -> f64 {
-        match self {
-            Factor::Value(val) => *val,
-            Factor::Expression(_) => panic!("Trying to extract an expression not a value"),
-        }
-    }
 
     // This way the result type is tied to current calculation
     // Could introduce errors if to choose to implement
@@ -41,6 +35,23 @@ impl Factor {
 
         Ok(Factor::Value(fact))
     }
+
+    fn extract(&self) -> f64 {
+        match self {
+            Factor::Value(val) => *val,
+            Factor::Expression(_) => panic!("Trying to extract an expression not a value"),
+        }
+    }
+
+    /// Extracts the value from the factor recursively evaluating the expression's sub-tree
+    /// starting in that node.
+    pub fn extract_factor(&self) -> f64 {
+        if let Factor::Expression(exp) = self {
+            exp.evaluate()
+        } else {
+            self.extract()
+        }
+    }
 }
 
 pub struct Expression {
@@ -61,19 +72,11 @@ impl Expression {
     pub fn evaluate(&self) -> f64 {
         let f = self.operator.extract();
 
-        let fact1 = extract_factor(&self.fact1);
+        let fact1 = self.fact1.extract_factor();
 
-        let fact2 = extract_factor(&self.fact2);
+        let fact2 = self.fact2.extract_factor();
 
         f(fact1, fact2)
-    }
-}
-
-fn extract_factor(fact: &Factor) -> f64 {
-    if let Factor::Expression(exp) = fact {
-        exp.evaluate()
-    } else {
-        fact.extract()
     }
 }
 

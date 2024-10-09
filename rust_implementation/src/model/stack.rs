@@ -1,3 +1,9 @@
+//! This crate provides an implementation of the stack. A stack is one of the basic data structures.
+//! 
+//! It can be thought sort of as a stack of boxes: each time a new element 
+//! is added to the stack (push) it is added on top of it, as a new box must be put on top of the others.
+//! To retrieve elements from a stack they must be taken (pop) from the top to the bottom of it. 
+
 use core::slice;
 use std::{alloc::{self, Layout}, fmt::Debug, mem, ptr::{self, NonNull}};
 
@@ -226,7 +232,10 @@ impl<T> Stack<T> {
     }
 
     /// Returns the reference to the element at 
-    /// the top of the stack
+    /// the top of the stack.
+    /// 
+    /// This function is not always considered as a function of a stack. But it is useful in some scenarios
+    /// and avoids boiler plate popping and pushing code. 
     /// 
     /// # Examples
     /// ```
@@ -249,6 +258,9 @@ impl<T> Stack<T> {
 
 
     /// Returns `true` if the stack contains no elements
+    /// 
+    /// This function is not needed to check the emptyiness of a stack (a stack is empty if the pop returns None)
+    /// though it was implemented just for completion sake.
     /// 
     /// # Examples
     /// 
