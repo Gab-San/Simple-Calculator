@@ -194,13 +194,15 @@ impl<T> Stack<T> {
     /// # Time complexity
     /// 
     /// Takes O(1) time.
-    pub fn push(&mut self, elem : T) {
+    pub fn push(&mut self, elem : T) -> &mut Self{
         if self.length == self.cap() {
             self.buf.grow();
         }
 
         unsafe { ptr::write(self.as_ptr().add(self.length), elem); }
         self.length +=1;
+
+        self
     }
 
 
@@ -326,6 +328,13 @@ mod tests {
         }
         assert_eq!(*stack.peek().unwrap(), 4);
         println!("{:#?}", stack);
+    }
+
+    #[test]
+    fn push_multi () {
+        let mut s  = Stack::with_capacity(3);
+        s.push(1).push(2).push(3);
+        println!("{s:#?}");
     }
 
     #[test]

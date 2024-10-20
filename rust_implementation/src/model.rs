@@ -2,6 +2,8 @@ mod tokenizer;
 mod stack;
 mod expressions;
 
+mod logger;
+
 use std::{error::Error, io::{self, Write}};
 
 use regex::Regex;
