@@ -1,13 +1,16 @@
-use std::{ fs::File, io::{self, Write}, sync::mpsc::{self, Receiver, Sender}, thread};
+use std::{ fs::File, io::Write, sync::mpsc::{self, Receiver, Sender}, thread};
 
 pub struct HistoryLogger {
+    file_path : String,
     tx: mpsc::Sender<String>,
 }
 
 impl HistoryLogger {
     pub fn build(file_path : &str) -> HistoryLogger {
+        let file_path = String::from(file_path);
+
         let (tx, rx) : (Sender<String>, Receiver<String>) = mpsc::channel();
-        let worker = Worker::build(String::from(file_path));
+        let worker = FileLogger::build(&file_path);
 
         thread::spawn(
             move ||
@@ -27,31 +30,34 @@ impl HistoryLogger {
         );
         
         HistoryLogger {
+            file_path,
             tx,
         }
     }
 
-    pub fn listen(&self, event : String) {
-        self.tx.send(event).unwrap();
+    pub fn store(&self, expression : &str) {
+        self.tx.send(expression.to_string()).unwrap();
+    }
+
+    pub fn file_path(&self) -> &String {
+        &self.file_path
     }
 }
 
-struct Worker {
-    file_path: String,
+struct FileLogger {
     f : Box<File>,
 }
 
-impl Worker {
-    fn build(file_path : String) -> Worker {
-        let f = File::options().create(true).read(true).write(true).truncate(true).open(&file_path).unwrap();
-        Worker {
-            file_path,
+impl FileLogger {
+    fn build(file_path : &str) -> FileLogger {
+        let f = File::options().create(true).read(true).write(true).truncate(true).open(file_path).unwrap();
+        FileLogger {
             f: Box::new(f),
         }
     }
 }
 
-impl Log for Worker {
+impl Log for FileLogger {
     fn log(&self, s : &str) {
         self.f.as_ref().write(s.as_bytes()).unwrap();
     }
@@ -75,6 +81,6 @@ mod tests {
     #[test]
     fn log_hello_world() {
         let logger = HistoryLogger::build("hw_test.txt");
-        logger.listen("Hello World!".to_string());
+        logger.store("Hello World!");
     }
 }

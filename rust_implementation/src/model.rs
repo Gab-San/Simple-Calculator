@@ -1,11 +1,10 @@
-mod tokenizer;
 mod stack;
 mod expressions;
-
 mod logger;
 
 use std::{error::Error, io::{self, Write}};
 
+use logger::HistoryLogger;
 use regex::Regex;
 use stack::Stack;
 use expressions::{Expression, Factor, operators::Operator};
@@ -16,35 +15,53 @@ const REGEX_STRING : &str = r"\b[0-9]+(?:\.[0-9]+){0,1}|\w+\b|(?:\b|\B)[()*/+-](
 
 pub fn run() -> Result< (), Box<dyn Error> > {
     let mut result : Option<f64> = None;
-    
+    let history_log = HistoryLogger::build("log.txt");
+
     loop {
-        let mut args: String = String::new();
+        let mut buf: String = String::new();
         print!("> ");
         io::stdout().flush()?;
-        io::stdin().read_line(&mut args)?;
+        io::stdin().read_line(&mut buf)?;
 
         // FIND REGEX TO PARSE FLOATS
         let rgx = Regex::new(REGEX_STRING)?;
-        let str_tok = tokenizer::build_tokenised_string(&rgx, &args[..]);
+        let str_tok = build_tokenised_string(&rgx, &buf[..]);
         // println!("{:#?}", str_tok);
         
         if str_tok.contains(&String::from("quit")) || str_tok.contains(&String::from("exit")) {
             break;
         }
+
         eprintln!("{:#?}", str_tok);
+
         let compl_exp: Factor = shunting_yard_algorithm(&str_tok, result)?;
         let expression = match compl_exp {
             Factor::Expression(exp) => *exp,
             Factor::Value(_) => Expression::new((compl_exp, Factor::Value(1.0)), Operator::Multiplication),
         };
+
         result = Some(expression.evaluate());
 
         println!("Result of your operation: {}", result.unwrap());
+        
+        log_result(&str_tok, result.unwrap(), &history_log);
     }
 
     Ok(())
 }
 
+
+fn log_result(str_tok : &Vec<String>, result : f64, history_log : &HistoryLogger) {
+    // This way it adds overhead even though it should all be done by the logger
+    let mut buf = String::new();
+    for val in str_tok {
+        buf.push_str(&val);
+    }
+    // Appending all the missing informations
+    buf.push_str("=");
+    buf.push_str(&result.to_string());
+    history_log.store(&buf);
+}
 
 fn build_exp(num_stack : &mut Stack<Factor>, operator : Operator) -> Factor {
     // Can work under the assumption that at least an atomic operation is possible when popping an operator
@@ -114,3 +131,34 @@ fn shunting_yard_algorithm(str_tok : &Vec<String>, res : Option<f64>) -> Result<
     assert!(number_stack.pop().is_none());
     Ok(compl_exp)
 }
+
+
+fn build_tokenised_string(rgx: &Regex, haystack : &str) -> Vec<String> {
+    Regex::find_iter(&rgx, haystack).map(|str_match| {String::from(str_match.as_str())}).collect()    
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use regex::Regex;
+
+    const RGX_STR : &str = r"\b[0-9]+\b|(?:\b|\B)[()*/+-](?:\b|\B)"; 
+
+    #[test]
+    fn tokenize_simple_expression() {
+        let rgx  = Regex::new(RGX_STR).unwrap();
+        let tokenised_string = build_tokenised_string(&rgx, "3+4/2");
+        assert_eq!(tokenised_string, vec!["3", "+", "4", "/", "2"]);
+    }
+
+    #[test]
+    fn tokenize_complex_expression() {
+        let rgx  = Regex::new(RGX_STR).unwrap();
+        let exp = "3+4*(2-5)/77-(82*(55-2))";
+        let tokenised_string = build_tokenised_string(&rgx, exp);
+        assert_eq!( tokenised_string, vec!["3", "+", "4", "*", "(", "2", "-", "5", ")", "/", "77",
+            "-", "(", "82", "*", "(", "55", "-", "2", ")", ")",] );
+    }
+}
+
