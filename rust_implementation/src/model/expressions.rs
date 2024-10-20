@@ -36,20 +36,12 @@ impl Factor {
         Ok(Factor::Value(fact))
     }
 
+    /// Extracts the value from the factor recursively evaluating the expression's sub-tree
+    /// starting in that node.
     fn extract(&self) -> f64 {
         match self {
             Factor::Value(val) => *val,
-            Factor::Expression(_) => panic!("Trying to extract an expression not a value"),
-        }
-    }
-
-    /// Extracts the value from the factor recursively evaluating the expression's sub-tree
-    /// starting in that node.
-    pub fn extract_factor(&self) -> f64 {
-        if let Factor::Expression(exp) = self {
-            exp.evaluate()
-        } else {
-            self.extract()
+            Factor::Expression(expr) => expr.evaluate(),
         }
     }
 }
@@ -72,9 +64,9 @@ impl Expression {
     pub fn evaluate(&self) -> f64 {
         let f = self.operator.extract();
 
-        let fact1 = self.fact1.extract_factor();
+        let fact1 = self.fact1.extract();
 
-        let fact2 = self.fact2.extract_factor();
+        let fact2 = self.fact2.extract();
 
         f(fact1, fact2)
     }

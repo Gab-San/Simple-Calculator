@@ -2,7 +2,7 @@ mod stack;
 mod expressions;
 mod logger;
 
-use std::{error::Error, io::{self, Write}};
+use std::{error::Error, io::{self, Write}, process};
 
 use logger::HistoryLogger;
 use regex::Regex;
@@ -18,36 +18,53 @@ pub fn run() -> Result< (), Box<dyn Error> > {
     let history_log = HistoryLogger::build("log.txt");
 
     loop {
-        let mut buf: String = String::new();
-        print!("> ");
-        io::stdout().flush()?;
-        io::stdin().read_line(&mut buf)?;
+        let buf = read_input()?;
 
         // FIND REGEX TO PARSE FLOATS
-        let rgx = Regex::new(REGEX_STRING)?;
-        let str_tok = build_tokenised_string(&rgx, &buf[..]);
-        // println!("{:#?}", str_tok);
-        
-        if str_tok.contains(&String::from("quit")) || str_tok.contains(&String::from("exit")) {
-            break;
-        }
+        let (str_expr, exit_bool) = parse_buffer(&buf)?;
+        // Is there a better way to do this?
+        if exit_bool {break;}
 
-        eprintln!("{:#?}", str_tok);
+        let final_expression = process_expression(&str_expr, result)?;
 
-        let compl_exp: Factor = shunting_yard_algorithm(&str_tok, result)?;
-        let expression = match compl_exp {
-            Factor::Expression(exp) => *exp,
-            Factor::Value(_) => Expression::new((compl_exp, Factor::Value(1.0)), Operator::Multiplication),
-        };
-
-        result = Some(expression.evaluate());
+        result = Some(final_expression.evaluate());
 
         println!("Result of your operation: {}", result.unwrap());
         
-        log_result(&str_tok, result.unwrap(), &history_log);
+        log_result(&str_expr, result.unwrap(), &history_log);
     }
 
     Ok(())
+}
+
+fn read_input() -> Result<String, io::Error> {
+    let mut buf: String = String::new();
+    print!("> ");
+    io::stdout().flush()?;
+    io::stdin().read_line(&mut buf)?;
+
+    Ok(buf)
+}
+
+fn parse_buffer(buf : &String) -> Result<(Vec<String>, bool), regex::Error> {
+    let rgx = Regex::new(REGEX_STRING)?;
+    let str_tok = build_tokenised_string(&rgx, &buf[..]);
+    if str_tok.contains(&String::from("quit")) || str_tok.contains(&String::from("exit")) {
+        return Ok((str_tok, true));
+    }
+    eprintln!("{:#?}", str_tok);
+
+    Ok((str_tok, false))
+}
+
+fn process_expression(str_expr : &Vec<String>, res : Option<f64>) -> Result<Expression, Box<dyn Error>> {
+    let compl_exp: Factor = shunting_yard_algorithm(str_expr, res)?;
+    let expression = match compl_exp {
+        Factor::Expression(exp) => *exp,
+        Factor::Value(_) => Expression::new((compl_exp, Factor::Value(1.0)), Operator::Multiplication),
+    };
+
+    Ok(expression)
 }
 
 

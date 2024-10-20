@@ -54,9 +54,6 @@ impl Operator {
     }
 }
 
-
-// These functions should be implemented manually to be as
-// close as possible to low level implementation (TO DECIDE. Could be done in C)
 fn sum(fact1 : f64, fact2: f64) -> f64 {
     fact1 + fact2
 }
